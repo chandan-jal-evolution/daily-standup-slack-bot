@@ -40,6 +40,24 @@ async function getBotJoinedChannels() {
   }
 }
 
+// Function to get all channels by user
+async function getChannelsByUser(userId: string) {
+  try {
+    // fetch all the channels where the bot has joined and user joined
+    const allJoinedChannels = await web.users.conversations({
+      token: process.env.SLACK_BOT_TOKEN,
+      user: userId,
+      types: "public_channel,private_channel",
+    });
+
+    if (!allJoinedChannels.channels) return [];
+    return allJoinedChannels.channels;
+  } catch (error) {
+    console.error("Error fetching joined channels:", error);
+    return [];
+  }
+}
+
 // Function to fetch information about all members in a channel
 async function getChannelMembers(channelId: string) {
   try {
@@ -91,6 +109,7 @@ async function sendStandupMessage() {
         token: process.env.SLACK_BOT_TOKEN,
         channel: member,
         blocks: standupReminderBlocks(user?.real_name || user?.name || member),
+        text: `Hi ${user?.real_name || user?.name || member} :wave:`,
       });
     }
   } catch (error) {
@@ -130,12 +149,30 @@ async function collectStandupResponse(
 // Listen to message
 app.message(async ({ event, message, say }) => {
   try {
+    // Check if it is from the bot channel
+    console.log("message = ", message);
+    console.log("event = ", event);
+
     if (message.subtype === undefined || message.subtype === "bot_message") {
-      console.log(event);
+      // Save the message
       const report = new Reports({ ...message });
       report.save();
 
-      collectStandupResponse("C06TBP8HFU1", report.user!, report.text!);
+      const userChannels = await getChannelsByUser(message.user!);
+      const botChannels = await getBotJoinedChannels();
+
+      const botList = botChannels.map((b) => b.id!);
+      const userList = userChannels.map((u) => u.id!);
+      const commonList = botList
+        .filter((b) => userList.includes(b))
+        .filter((c) => c !== undefined);
+
+      // Send it to the channel
+      for (const channelId of commonList) {
+        await collectStandupResponse(channelId, message.user!, message.text!);
+      }
+
+      // Send thank you message
       await say({
         blocks: [
           {
