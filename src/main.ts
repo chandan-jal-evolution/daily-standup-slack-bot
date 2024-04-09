@@ -130,22 +130,81 @@ async function collectStandupResponse(
 // Listen to message
 app.message(async ({ event, message, say }) => {
   try {
-    console.log("message = ", message);
-    // Check if the message is from the bot itself to avoid infinite loops
-    if (event.subtype && event.subtype === "bot_message") {
-      return;
+    if (message.subtype === undefined || message.subtype === "bot_message") {
+      console.log(event);
+      const report = new Reports({ ...message });
+      report.save();
+
+      collectStandupResponse("C06TBP8HFU1", report.user!, report.text!);
+      await say({
+        blocks: [
+          {
+            type: "section",
+            text: {
+              type: "mrkdwn",
+              text: "Thank you :tada:",
+            },
+          },
+        ],
+      });
     }
+
+    // console.log(event);
+    // console.log("this is comming inside");
+    // console.log("now save");
+    // console.log("channel = ", event.channel);
+    // Fetch members form the channel
+    // const members = await getChannelMembers(event.channel);
+    // console.log("members = ", members);
+
+    // Fetch information about the conversation
+    // const conversationInfo = await app.client.conversations.info({
+    //   channel: event.channel,
+    // });
+
+    // Check if the conversation members include the bot's user ID
+    // const botUserId = await app.client.auth.test().then((res) => {
+    //   console.log("bot auth response = ", res);
+    //   return res.bot_id;
+    // });
+
+    // console.log(conversationInfo);
+    // console.log(botUserId);
+
+    // console.log("event = ", event);
+    // console.log("message = ", message);
+    // // Check if it is from the bot channel
+    // const otherThenBotSelfChannels = await getBotJoinedChannels();
+    // console.log(otherThenBotSelfChannels.map((c) => c.id));
+    // console.log(event.channel);
+    // const item = otherThenBotSelfChannels.find((c) => c.id === event.channel);
+    // if (item === undefined) {
+    //   return;
+    // }
+
+    // console.log("message = ", message);
+    // Check if the message is from the bot itself to avoid infinite loops
+    // if (event.channel_type === "im" && event.subtype === "bot_message") {
+    //   console.log("bot sent this message");
+    //   return;
+    // }
 
     // Step TODO:
     // 1. Save the message inside db
     // 2. send it to the channel
-    const report = new Reports({ ...message });
-    report.save();
-    console.log("Message has been saved");
+    // const report = new Reports({ ...message });
+    // report.save();
+    // console.log("report data = ", report);
+    // console.log("Message has been saved");
 
-    // const chennels = await getJoinedChannels();
-    // console.log(chennels);
-    collectStandupResponse("C06TBP8HFU1", report.user!, report.text!);
+    // const result = await web.conversations.list({
+    //   types: "public_channel,private_channel",
+    // });
+
+    // // const chennels = await getJoinedChannels();
+    // // console.log(chennels);
+    // Testing channel
+    // collectStandupResponse("C06TBP8HFU1", report.user!, report.text!);
   } catch (error) {
     console.error("Error saving message:", error);
   }
